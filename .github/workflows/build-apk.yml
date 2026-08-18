@@ -11,67 +11,57 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Extract Android project ZIP
         run: |
+          set -e
           mkdir -p project
-          unzip -q "CampusConnectStudent_FIXED2.zip" -d project
-
-          echo "=== Extracted files ==="
-          find project -maxdepth 3 -type f | head -100
+          ZIP_FILE="./CampusConnectStudent_FULLY_FIXED.zip"
+          if [ ! -f "$ZIP_FILE" ]; then
+            echo "ERROR: $ZIP_FILE was not found in repository root."
+            exit 1
+          fi
+          echo "Using: $ZIP_FILE"
+          unzip -q "$ZIP_FILE" -d project
 
       - name: Find Gradle project
         run: |
-          GRADLEW=$(find project -type f -name "gradlew" | head -1)
-
+          set -e
+          GRADLEW=$(find project -type f -name gradlew -print -quit)
           if [ -z "$GRADLEW" ]; then
             echo "ERROR: gradlew was not found inside the ZIP."
-            find project -maxdepth 5 -type f
+            find project -maxdepth 5 -type f | sort | head -300
             exit 1
           fi
-
           PROJECT_DIR=$(dirname "$GRADLEW")
-
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Android project: $PROJECT_DIR"
 
-          echo "Android project found at:"
-          echo "$PROJECT_DIR"
-
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
           cache: gradle
 
-      - name: Make Gradle executable
-        run: |
-          chmod +x "$PROJECT_DIR/gradlew"
-
-      - name: Check Gradle
-        run: |
-          cd "$PROJECT_DIR"
-          ./gradlew --version
-
       - name: Build Debug APK
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
         run: |
+          set -e
           cd "$PROJECT_DIR"
-          ./gradlew assembleDebug \
-            --no-daemon \
-            --max-workers=1 \
-            --stacktrace
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --max-workers=1 --stacktrace
 
       - name: Find APK
         run: |
-          echo "=== APK files ==="
-          find "$PROJECT_DIR" -type f -name "*.apk" -print
+          find "$PROJECT_DIR" -type f -name '*.apk' -print
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: CampusConnectStudent-APK
-          path: "**/build/outputs/apk/**/*.apk"
+          path: '**/build/outputs/apk/**/*.apk'
           if-no-files-found: error
