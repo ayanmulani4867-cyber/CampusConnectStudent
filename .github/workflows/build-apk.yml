@@ -20,7 +20,7 @@ jobs:
       - name: Extract Android project ZIP
         run: |
           mkdir -p project
-          unzip -q "CampusConnectStudent_FIXED (1).zip" -d project
+         unzip -q "CampusConnectStudent_FIXED2.zip" -d project
 
           echo "=== Extracted project ==="
           find project -maxdepth 3 -type f | head -100
